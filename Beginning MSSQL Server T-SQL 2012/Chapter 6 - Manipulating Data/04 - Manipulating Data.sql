@@ -21,7 +21,7 @@ Run the following code to create a table that you will populate with data in thi
 --	,FirstName NVARCHAR(50) NOT NULL
 --	,MiddleName NVARCHAR(50) NULL
 --	,LastName NVARCHAR(50) NOT NULL
---);
+-- );
 
 /*
 Adding One Row with Literal Values
@@ -197,3 +197,130 @@ By using row constructors, you can specify multiple lists of values, separated b
 --	CustomerID >= 7;
 
 /*Inserting Rows from Another Table (p. 204)*/
+
+-- using sql we can insert data from one table or query into another table
+
+-- 1
+-- inserts the rows from the Person.Person table where 
+-- the BusinessEntityID is between 19 and 35.
+
+--insert into 
+--	dbo.demoCustomer (CustomerId, FirstName, MiddleName, LastName)
+--Select
+--	BusinessEntityId, FirstName, MiddleName, LastName
+--From
+--	Person.Person
+--Where
+--	BusinessEntityID Between 19 and 35;
+
+---- 2
+---- inserts the rows from a query that joins the Person.Person 
+---- and Sales.SalesOrderHeader tables. 
+--INSERT INTO 
+--	dbo.demoCustomer (CustomerID, FirstName, MiddleName, LastName)
+--SELECT DISTINCT 
+--	c.BusinessEntityID, c.FirstName, c.MiddleName, c.LastName
+--	FROM 
+--		Person.Person AS c
+--		INNER JOIN 
+--		Sales.SalesOrderHeader AS s ON c.BusinessEntityID = s.SalesPersonID
+
+---- 3
+--SELECT CustomerID, FirstName, MiddleName, LastName
+--FROM dbo.demoCustomer
+--WHERE CustomerID > 18;
+
+-- The SELECT parts of the statements are valid queries that can be run 
+-- without the INSERT clauses.
+
+/*Inserting Missing Rows (p. 206)*/
+
+-- When inserting rows from one table to another we want to be sure
+-- we dont break the promary key. In order to do this we can use 
+-- OUTER JOIN, which enables us to find rows from source table that
+-- do not exist in the target table.
+
+-- 1
+--INSERT INTO 
+--	dbo.demoCustomer (CustomerId, FirstName, MiddleName, LastName)
+--SELECT
+--	c.BusinessEntityId, c.FirstName, c.MiddleName, c.LastName
+--FROM
+--	Person.Person AS c
+--	LEFT OUTER JOIN dbo.demoCustomer AS targetTable ON c.BusinessEntityID = targetTable.CustomerId
+--WHERE
+--    -- check for NULL in the target table
+--	targetTable.CustomerId IS NULL;
+
+-- 2 
+-- SELECT COUNT(CustomerId) AS CutomerCount FROM dbo.demoCustomer;
+
+
+/* Creating and populating a table in one statement */
+
+-- The SELECT INTO statement allows you to create a table and populate 
+-- it with one statement. It can be used to create temporary tables, 
+-- or work tables.
+
+-- first check if the table already exist and drop it if it does
+IF EXISTS (
+	SELECT 
+		* 
+	FROM 
+		sys.objects
+	WHERE 
+		object_id = OBJECT_ID(N'[dbo].[demoCustomer]') 
+		AND type in (N'U'))
+DROP TABLE dbo.demoCustomer;
+
+--1
+-- lists the columns and an expression along with
+-- the word INTO and the name of the table to create. 
+-- The resulting table contains a column, FullName, that
+-- the statement created with the expression. 
+
+-- You can write a query that doesn't specify an
+-- alias for the expression, but you must specify the alias 
+-- for the expression when writing SELECT INTO
+-- statements. 
+
+-- The database engine uses the column and alias names when 
+-- creating the new table.
+
+-- The primary key from the source table will not be created
+-- in the destinationa table
+
+SELECT 
+	BusinessEntityID, 
+	FirstName, 
+	MiddleName, 
+	LastName, 
+	FirstName + ISNULL(' ' + MiddleName,'') + ' ' + LastName AS FullName
+INTO 
+	-- name for the name table
+	dbo.demoCustomer
+FROM 
+	Person.Person;
+
+--2
+SELECT 
+	BusinessEntityID, FirstName, MiddleName, LastName, FullName
+FROM 
+	dbo.demoCustomer;
+
+-- Developers often use the SELECT INTO statement to create an empty 
+-- table by adding 1=2 to the WHERE clause.
+
+-- If you want to create and populate a work table, is often better to 
+-- create the empty table first and then populating it with a regular 
+-- INSERT statement when you are working with a large number of rows. 
+
+-- SELECT INTO statement locks system tables that can cause problems 
+-- for other connections. Using a CREATE TABLE first and then populating it 
+-- locks the system tables only momentarily. 
+
+-- Using the SELECT INTO syntax locks the tables until the 
+-- entire statement completes.
+
+
+/* Inserting Rows into Tables with Default Column Values (p.208) */
